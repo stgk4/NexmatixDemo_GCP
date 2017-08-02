@@ -1,3 +1,12 @@
+/*
+*
+*
+*Cloud function for subscribing to manifold-state topic
+*
+*
+*/
+
+
 // Specifying datastore requirement in GCP project
 const Datastore = require('@google-cloud/datastore');
 
@@ -40,54 +49,21 @@ exports.subscribe = function subscribe (event, callback) {
 function createEntity (jsonData) {
   var manifold_key = jsonData.manifold_sn;
   
-  /*
-  {
-	"manifold_sn": 1,
-	"stations": [{
-		"station_num": 0,
-		"valve_sn": 2,
-		"sku": "NX-DCV-SM-BLU-2-V0-L0-S0-00",
-		"cc": 8,
-		"ccl": 406351062,
-		"pp": 125.0,
-		"p_fault": "H",
-		"leak": "N",
-		"input": "B",
-		"update_time": 1501615838081
-	}, {
-  */
-  
   for(var i = 0; i < jsonData.stations.length; i++){
-	  var manifold_sn = jsonData.manifold_sn;
-	  var station = jsonData.stations[i];
+		var station = jsonData.stations[i];
+		
+		var kind = "ValveStatus";
+		var entityKey = manifold_key + "." + station.station_num + "." + station.valve_sn;
+		var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
+		const key = getKeyFromRequestData(request_for_key);
 	  
-	  var kind = "Valve";
-	  var entityKey = station.valve_sn;
-	  var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
-	  const key = getKeyFromRequestData(request_for_key);
-	  
-	  var entity = {
+		entity = {
 		key: key,
 		data: [
 			{
-				name: 'sku',
-				value: station.sku
-			}
-		]
-		};
-
-		//function to add entities
-		addEntity(entity);
-		
-	
-		kind = "ValveStatus";
-		entityKey = manifold_sn + "." + station.station_num + "." + station.valve_sn;
-		request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
-		const key2 = getKeyFromRequestData(request_for_key);
-	  
-		entity = {
-		key: key2,
-		data: [
+				name: 'valve_sn',
+				value: station.valve_sn
+			},
 			{
 				name: 'update_time',
 				value: new Date().toJSON()
@@ -123,14 +99,13 @@ function createEntity (jsonData) {
 		addEntity(entity);
 	}
   }
-  
 //[END createEntity]
 
 // [START addEntity]
 function addEntity (entity) {
   datastore.save(entity)
     .then(() => {
-      console.log(`an Entity ${taskKey.id} created successfully.`);
+      console.log(`an Entity ${entity.key.id} created successfully.`);
     })
     .catch((err) => {
       console.error('ERROR:', err);
