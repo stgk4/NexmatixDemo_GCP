@@ -1,3 +1,12 @@
+/*
+*
+*
+*Cloud function for subscribing to manifold-configuration topic
+*
+*
+*/
+
+
 // Specifying datastore requirement in GCP project
 const Datastore = require('@google-cloud/datastore');
 
@@ -26,9 +35,9 @@ exports.subscribe = function subscribe (event, callback) {
   
   
   if (!jsonData) {
-    throw new Error('message is empty!');
+    throw new Error('message-payload is empty!');
   }
-  //parsing the message for updating/creating the Manifold kind entity
+  //parsing the message for updating/creating the 'Valve' kind entity
   createEntity(jsonData);
 
   // Don't forget to call the callback!
@@ -40,25 +49,7 @@ exports.subscribe = function subscribe (event, callback) {
 function createEntity (jsonData) {
   var manifold_key = jsonData.manifold_sn;
   
-  /*
-  {
-	"manifold_sn": 1,
-	"stations": [{
-		"station_num": 0,
-		"valve_sn": 2,
-		"sku": "NX-DCV-SM-BLU-2-V0-L0-S0-00",
-		"cc": 8,
-		"ccl": 406351062,
-		"pp": 125.0,
-		"p_fault": "H",
-		"leak": "N",
-		"input": "B",
-		"update_time": 1501615838081
-	}, {
-  */
-  
   for(var i = 0; i < jsonData.stations.length; i++){
-	  var manifold_sn = jsonData.manifold_sn;
 	  var station = jsonData.stations[i];
 	  
 	  var kind = "Valve";
@@ -70,51 +61,24 @@ function createEntity (jsonData) {
 		key: key,
 		data: [
 			{
-				name: 'sku',
-				value: station.sku
-			}
-		]
-		};
-
-		//function to add entities
-		addEntity(entity);
-		
-	
-		kind = "ValveStatus";
-		entityKey = manifold_sn + "." + station.station_num + "." + station.valve_sn;
-		request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
-		const key2 = getKeyFromRequestData(request_for_key);
-	  
-		entity = {
-		key: key2,
-		data: [
+				name: 'station_num',
+				value: station.station_num
+			},
 			{
 				name: 'update_time',
-				value: new Date().toJSON()
+				value: station.update_time
 			},
 			{
-				name: 'input',
-				value: station.input
+				name: 'sku',
+				value: station.sku
 			},
 			{
-				name: 'cc',
-				value: station.cc
+				name: 'fab_date',
+				value: station.fab_date
 			},
 			{
-				name: 'pp',
-				value: station.pp
-			},
-			{
-				name: 'ccl',
-				value: station.ccl
-			},
-			{
-				name: 'p_fault',
-				value: station.p_fault
-			},
-			{
-				name: 'leak',
-				value: station.leak
+				name: 'ship_date',
+				value: station.ship_date
 			}
 		]
 		};
@@ -130,7 +94,7 @@ function createEntity (jsonData) {
 function addEntity (entity) {
   datastore.save(entity)
     .then(() => {
-      console.log(`an Entity ${taskKey.id} created successfully.`);
+      console.log(`an Entity ${entity.key.id} created successfully.`);
     })
     .catch((err) => {
       console.error('ERROR:', err);
