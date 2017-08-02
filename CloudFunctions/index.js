@@ -22,52 +22,115 @@ exports.subscribe = function subscribe (event, callback) {
   
   console.log(message);
   
-  var message_object = JSON.parse(message);
+  var jsonData = JSON.parse(message);
   
   
-  if (!message_object) {
+  if (!jsonData) {
     throw new Error('message is empty!');
   }
   //parsing the message for updating/creating the Manifold kind entity
-  createEntity_ManifoldKind(message_object);
+  createEntity(jsonData);
 
   // Don't forget to call the callback!
   callback();
 };
 // [END functions_pubsub_subscribe]
 
-// [START createEntity_ManifoldKind]
-function createEntity_ManifoldKind (message_object) {
-  var manifold_key = message_object.manifold_sn;
-  var kind = "Manifold";
-  var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(manifold_key).concat("\"}"));
-  //var request = '{"kind":"Task","key":"sampletask1"}';
-   
-  console.log(manifold_key);
-  console.log(request_for_key);
-   
-  const key = getKeyFromRequestData(request_for_key);
+// [START createEntity]
+function createEntity (jsonData) {
+  var manifold_key = jsonData.manifold_sn;
   
-  var entity = {
-    key: key,
-	data: [
-      {
-        name: 'last_updated',
-        value: new Date().toJSON()
-      }
-    ]
-  };
+  /*
+  {
+	"manifold_sn": 1,
+	"stations": [{
+		"station_num": 0,
+		"valve_sn": 2,
+		"sku": "NX-DCV-SM-BLU-2-V0-L0-S0-00",
+		"cc": 8,
+		"ccl": 406351062,
+		"pp": 125.0,
+		"p_fault": "H",
+		"leak": "N",
+		"input": "B",
+		"update_time": 1501615838081
+	}, {
+  */
+  
+  for(var i = 0; i < jsonData.stations.length; i++){
+	  var manifold_sn = jsonData.manifold_sn;
+	  var station = jsonData.stations[i];
+	  
+	  var kind = "Valve";
+	  var entityKey = station.valve_sn;
+	  var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
+	  const key = getKeyFromRequestData(request_for_key);
+	  
+	  var entity = {
+		key: key,
+		data: [
+			{
+				name: 'sku',
+				value: station.sku
+			}
+		]
+		};
 
-  //function to add entities
-  addEntity(entity);
-}
-//[END createEntity_ManifoldKind]
+		//function to add entities
+		addEntity(entity);
+		
+	
+		kind = "ValveStatus";
+		entityKey = manifold_sn + "." + station.station_num + "." + station.valve_sn;
+		request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
+		const key2 = getKeyFromRequestData(request_for_key);
+	  
+		entity = {
+		key: key2,
+		data: [
+			{
+				name: 'update_time',
+				value: new Date().toJSON()
+			},
+			{
+				name: 'input',
+				value: station.input
+			},
+			{
+				name: 'cc',
+				value: station.cc
+			},
+			{
+				name: 'pp',
+				value: station.pp
+			},
+			{
+				name: 'ccl',
+				value: station.ccl
+			},
+			{
+				name: 'p_fault',
+				value: station.p_fault
+			},
+			{
+				name: 'leak',
+				value: station.leak
+			}
+		]
+		};
+
+		//function to add entities
+		addEntity(entity);
+	}
+  }
+  
+//[END createEntity]
 
 // [START addEntity]
 function addEntity (entity) {
   datastore.save(entity)
     .then(() => {
-      console.log(`Task ${key.id} created successfully.`);
+      console.log(`an Entity ${taskKey.id} created successfully.`);
     })
     .catch((err) => {
       console.error('ERROR:', err);
