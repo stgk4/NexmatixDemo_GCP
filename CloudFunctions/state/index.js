@@ -115,26 +115,43 @@ function createEntity (jsonData) {
 		//function to add entities
 		addEntity(entity);
 		
-		//Check for pressure faults
+		//I. Check for pressure faults
 		if(PRESSURE_FAULTS.includes(p_fault)){
-			//TODO: add a pressure fault alert
 			
+			//TODO: add a pressure fault alert
 			addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, (p_fault == 'H') ? "High":"Low");
+		}else{
+			if(p_fault=='N'){
+				//do nothing
+			}else{
+				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
+			}
 		}
 		
+		//II. Check for leak failures
 		if(LEAK_FAULTS.includes(leak)){
 			//TODO: add a leak alert
+		}else{
+			if(leak=='N'){
+				//do nothing
+				//addAlertEntity(TYPE_LEAK_FAULT, valve_sn, (leak == 'P') ? "Persistent":"\"C\"");
+			}else{
+				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
+			}
 		}
 		
+		//III. Check for cycle count limit exceed failures
 		if(cc>ccl){
 			//TODO: add a c_thresh alert
+		}else{
+			//do nothing
 		}
 	}
   }
 //[END createEntity]
 
 //[START createAlertEntity]
-function addAlertEntity(alertType, valve_sn, description){
+function addAlertEntity(alert_type, valve_sn, description){
 		var alertKey = new Date().toJSON();
 		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_ALERT).concat("\", \"key\":\"").concat(alertKey).concat("\"}"));
 		const key = getKeyFromRequestData(request_for_key);
