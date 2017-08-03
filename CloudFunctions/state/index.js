@@ -13,6 +13,15 @@ const Datastore = require('@google-cloud/datastore');
 // Instantiates a client
 const datastore = Datastore();
 
+//enums
+const KIND_VALVE_STATUS = "ValveStatus"
+const KIND_VALVE_ALERT = "ValveAlert"
+const PRESSURE_FAULTS = ['H', 'L'];
+const LEAK_FAULTS = ['C', 'P'];
+const TYPE_PRESSURE_FAULT = "p_fault";
+const TYPE_LEAK_FAULT = "leak";
+const TYPE_C_THRESH_FAULT = "c_thresh";
+
 
 // [START functions_pubsub_subscribe]
 /**
@@ -52,17 +61,25 @@ function createEntity (jsonData) {
   for(var i = 0; i < jsonData.stations.length; i++){
 		var station = jsonData.stations[i];
 		
-		var kind = "ValveStatus";
-		var entityKey = manifold_key + "." + station.station_num + "." + station.valve_sn;
-		var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
+		const station_num = station.station_num;
+		const valve_sn = station.valve_sn;
+		const input = station.input;
+		const cc = station.cc;
+		const pp = station.pp;
+		const ccl = station.ccl;
+		const p_fault = station.p_fault; 
+		const leak = station.leak;
+		
+		var entityKey = manifold_key + "." + station_num + "." + valve_sn;
+		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_STATUS).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
 		const key = getKeyFromRequestData(request_for_key);
-	  
+		
 		entity = {
 		key: key,
 		data: [
 			{
 				name: 'valve_sn',
-				value: station.valve_sn
+				value: valve_sn
 			},
 			{
 				name: 'update_time',
@@ -70,36 +87,84 @@ function createEntity (jsonData) {
 			},
 			{
 				name: 'input',
-				value: station.input
+				value: input
 			},
 			{
 				name: 'cc',
-				value: station.cc
+				value: cc
 			},
 			{
 				name: 'pp',
-				value: station.pp
+				value: pp
 			},
 			{
 				name: 'ccl',
-				value: station.ccl
+				value: ccl
 			},
 			{
 				name: 'p_fault',
-				value: station.p_fault
+				value: p_fault
 			},
 			{
 				name: 'leak',
-				value: station.leak
+				value: leak
 			}
 		]
 		};
 
 		//function to add entities
 		addEntity(entity);
+		
+		//Check for pressure faults
+		if(PRESSURE_FAULTS.includes(p_fault)){
+			//TODO: add a pressure fault alert
+			
+			addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, (p_fault == 'H') ? "High":"Low");
+		}
+		
+		if(LEAK_FAULTS.includes(leak)){
+			//TODO: add a leak alert
+		}
+		
+		if(cc>ccl){
+			//TODO: add a c_thresh alert
+		}
 	}
   }
 //[END createEntity]
+
+//[START createAlertEntity]
+function addAlertEntity(alertType, valve_sn, description){
+		var alertKey = new Date().toJSON();
+		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_ALERT).concat("\", \"key\":\"").concat(alertKey).concat("\"}"));
+		const key = getKeyFromRequestData(request_for_key);
+		
+		entity = {
+		key: key,
+		data: [
+			{
+				name: 'valve_sn',
+				value: valve_sn
+			},
+			{
+				name: 'detection_time',
+				value: new Date().toJSON()
+			},
+			{
+				name: 'alert_type',
+				value: alert_type
+			},
+			{
+				name: 'description',
+				value: description + " pressure fault detected" 
+			}
+		]
+		};
+
+		//function to add entities
+		addEntity(entity);
+}
+//[END createAlertEntity]
 
 // [START addEntity]
 function addEntity (entity) {
