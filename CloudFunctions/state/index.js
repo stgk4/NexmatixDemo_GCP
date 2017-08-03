@@ -17,9 +17,9 @@ const datastore = Datastore();
 const KIND_VALVE_STATUS = "ValveStatus"
 const KIND_VALVE_ALERT = "ValveAlert"
 const PRESSURE_FAULTS = ['H', 'L'];
-const LEAK_FAULTS = ['C', 'P'];
+const LEAKS = ['C', 'P'];
 const TYPE_PRESSURE_FAULT = "p_fault";
-const TYPE_LEAK_FAULT = "leak";
+const TYPE_LEAK = "leak";
 const TYPE_C_THRESH_FAULT = "c_thresh";
 
 
@@ -119,7 +119,7 @@ function createEntity (jsonData) {
 		if(PRESSURE_FAULTS.includes(p_fault)){
 			
 			//TODO: add a pressure fault alert
-			addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, (p_fault == 'H') ? "High":"Low");
+			addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, ((p_fault == 'H') ? "High":"Low") + " pressure fault detected");
 		}else{
 			if(p_fault=='N'){
 				//do nothing
@@ -129,12 +129,12 @@ function createEntity (jsonData) {
 		}
 		
 		//II. Check for leak failures
-		if(LEAK_FAULTS.includes(leak)){
+		if(LEAKS.includes(leak)){
 			//TODO: add a leak alert
 		}else{
 			if(leak=='N'){
 				//do nothing
-				//addAlertEntity(TYPE_LEAK_FAULT, valve_sn, (leak == 'P') ? "Persistent":"\"C\"");
+				addAlertEntity(TYPE_LEAK, valve_sn, ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
 			}else{
 				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
 			}
@@ -143,6 +143,7 @@ function createEntity (jsonData) {
 		//III. Check for cycle count limit exceed failures
 		if(cc>ccl){
 			//TODO: add a c_thresh alert
+			addAlertEntity(TYPE_C_THRESH_FAULT, valve_sn, "Cycle Count exceeded the the threshold (ccl) by " + (cc-ccl));
 		}else{
 			//do nothing
 		}
@@ -152,7 +153,7 @@ function createEntity (jsonData) {
 
 //[START createAlertEntity]
 function addAlertEntity(alert_type, valve_sn, description){
-		var alertKey = new Date().toJSON();
+		var alertKey = new Date().getTime();
 		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_ALERT).concat("\", \"key\":\"").concat(alertKey).concat("\"}"));
 		const key = getKeyFromRequestData(request_for_key);
 		
@@ -165,7 +166,7 @@ function addAlertEntity(alert_type, valve_sn, description){
 			},
 			{
 				name: 'detection_time',
-				value: new Date().toJSON()
+				value: new Date().toJSON() //do a query for old time stamp
 			},
 			{
 				name: 'alert_type',
@@ -173,7 +174,7 @@ function addAlertEntity(alert_type, valve_sn, description){
 			},
 			{
 				name: 'description',
-				value: description + " pressure fault detected" 
+				value: description 
 			}
 		]
 		};
