@@ -91,7 +91,7 @@ function createEntity (jsonData) {
 			},
 			{
 				name: 'update_time',
-				value: new Date().toJSON()
+				value: new Date().getTime()
 			},
 			{
 				name: 'input',
