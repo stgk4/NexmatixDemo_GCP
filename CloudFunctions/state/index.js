@@ -82,6 +82,14 @@ function createEntity (jsonData) {
 				value: valve_sn
 			},
 			{
+				name: 'manifold_sn',
+				value: manifold_key
+			},
+			{
+				name: 'station_num',
+				value: station_num
+			},
+			{
 				name: 'update_time',
 				value: new Date().toJSON()
 			},
