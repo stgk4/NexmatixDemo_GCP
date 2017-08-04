@@ -127,7 +127,7 @@ function createEntity (jsonData) {
 		if(PRESSURE_FAULTS.includes(p_fault)){
 			
 			//TODO: add a pressure fault alert
-			addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, ((p_fault == 'H') ? "High":"Low") + " pressure fault detected");
+			//addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, ((p_fault == 'H') ? "High":"Low") + " pressure fault detected");
 		}else{
 			if(p_fault=='N'){
 				//do nothing
@@ -142,7 +142,7 @@ function createEntity (jsonData) {
 		}else{
 			if(leak=='N'){
 				//do nothing
-				addAlertEntity(TYPE_LEAK, valve_sn, ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
+				//addAlertEntity(TYPE_LEAK, valve_sn, ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
 			}else{
 				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
 			}
