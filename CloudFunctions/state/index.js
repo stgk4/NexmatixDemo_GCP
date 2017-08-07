@@ -15,7 +15,7 @@ const datastore = Datastore();
 
 //enums
 const KIND_VALVE_STATUS = "ValveStatus"
-const KIND_VALVE_ALERT = "ValveAlert_test"
+const KIND_VALVE_ALERT = "ValveAlert"
 const PRESSURE_FAULTS = ['H', 'L'];
 const LEAKS = ['C', 'P'];
 const TYPE_PRESSURE_FAULT = "p_fault";
@@ -251,15 +251,14 @@ function updateEntity (valve_sn, alert_type, description) {
 
 // [START delete_entity]
 function deleteAlert (valve_sn, alert_type) {
-  const taskKey = datastore.key([
+  const retrieved_key_del = datastore.key([
     KIND_VALVE_ALERT,
-    valve_sn,
-	alert_type
+    valve_sn + '.' + alert_type
   ]);
 
-  datastore.delete(taskKey)
+  datastore.delete(retrieved_key_del)
     .then(() => {
-      console.log(`Task ${taskId} deleted successfully.`);
+      console.log(`Task ${retrieved_key_del} deleted successfully.`);
     })
     .catch((err) => {
       console.error('ERROR:', err);
