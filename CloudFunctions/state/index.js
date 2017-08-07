@@ -123,30 +123,45 @@ function createEntity (jsonData) {
 		//function to add entities
 		addEntity(entity);
 		
-		//I. Check for pressure faults
-		if(PRESSURE_FAULTS.includes(p_fault)){
+		//I. Pressure faults processing
+		var num_of_matching_pressure_alerts = -1;
 			
-			//TODO: add a pressure fault alert
-			//addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, ((p_fault == 'H') ? "High":"Low") + " pressure fault detected");
-		}else{
-			if(p_fault=='N'){
-				//do nothing
-			}else{
-				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
-			}
-		}
+			const pressure_query = datastore.createQuery(KIND_VALVE_ALERT)
+			.filter('valve_sn', '=', valve_sn)
+			.filter('alert_type', '=', TYPE_PRESSURE_FAULT);
+
+			datastore.runQuery(pressure_query)
+				.then((results) => {
+					// alert entities found.
+					const entities = results[0];
+					entities.forEach((entity) => console.log(entity));
+					//Check for pressure faults if not exist
+					if(entities.length==0){
+						console.log("Createing a pressure alert record...");
+						addAlertEntity(TYPE_PRESSURE_FAULT, valve_sn, ((p_fault == 'H') ? "High":"Low") + " pressure fault detected");
+					}else if(p_fault=='N'){
+						//delete all vavle_sn.alert_type
+						deleteAlert (valve_sn, TYPE_PRESSURE_FAULT);
+					}else{
+						//update if it is an existing alert
+						updateEntity (valve_sn, TYPE_PRESSURE_FAULT, "Update:" +((p_fault == 'H') ? "High":"Low") + "pressure fault detected");
+					}	
+			});
 		
-		//II. Check for leak failures
+		
+		//II. Leak failures processing
 		if(LEAKS.includes(leak)){
 			//TODO: add a leak alert
 		}else{
 			if(leak=='N'){
 				//do nothing
 				//addAlertEntity(TYPE_LEAK, valve_sn, ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
+				//deleteAlert (valve_sn, alert_type);
 			}else{
 				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
 			}
 		}
+		
 		
 		//III. Check for cycle count limit exceed failures
 		if(cc>ccl){
@@ -258,7 +273,7 @@ function deleteAlert (valve_sn, alert_type) {
 
   datastore.delete(retrieved_key_del)
     .then(() => {
-      console.log(`Task ${retrieved_key_del} deleted successfully.`);
+      console.log(`alertEntity ${retrieved_key_del} deleted successfully.`);
     })
     .catch((err) => {
       console.error('ERROR:', err);
