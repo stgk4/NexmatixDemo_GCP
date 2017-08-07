@@ -148,9 +148,7 @@ function createEntity (jsonData) {
 					}	
 			});
 		
-		
-		//II. Leak failures processing
-		if(LEAKS.includes(leak)){
+		/*if(LEAKS.includes(leak)){
 			//TODO: add a leak alert
 		}else{
 			if(leak=='N'){
@@ -160,8 +158,32 @@ function createEntity (jsonData) {
 			}else{
 				console.log("PAYLOAD_ERROR: undefined p_fault value detected");
 			}
-		}
+		}*/
 		
+		//II. Leak failures processing
+		var num_of_matching_leak_alerts = -1;
+			
+			const leak_query = datastore.createQuery(KIND_VALVE_ALERT)
+			.filter('valve_sn', '=', valve_sn)
+			.filter('alert_type', '=', TYPE_LEAK);
+
+			datastore.runQuery(leak_query)
+				.then((results) => {
+					// alert entities found.
+					const entities = results[0];
+					entities.forEach((entity) => console.log(entity));
+					//Check for leak faults if not exist
+					if(entities.length==0){
+						console.log("Createing a leak alert record...");
+						addAlertEntity(TYPE_LEAK, valve_sn, ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
+					}else if(leak=='N'){
+						//delete all vavle_sn.alert_type
+						deleteAlert (valve_sn, TYPE_LEAK);
+					}else{
+						//update if it is an existing alert
+						updateEntity (valve_sn, TYPE_LEAK, "Update:" + ((leak == 'P') ? "Persistent":"\"C\"") + " leak detected");
+					}	
+			});
 		
 		//III. Check for cycle count limit exceed failures
 		if(cc>ccl){
