@@ -15,7 +15,7 @@ const datastore = Datastore();
 
 //enums
 const KIND_VALVE_STATUS = "ValveStatus"
-const KIND_VALVE_ALERT = "ValveAlert"
+const KIND_VALVE_ALERT = "ValveAlert_test"
 const PRESSURE_FAULTS = ['H', 'L'];
 const LEAKS = ['C', 'P'];
 const TYPE_PRESSURE_FAULT = "p_fault";
@@ -151,30 +151,52 @@ function createEntity (jsonData) {
 		//III. Check for cycle count limit exceed failures
 		if(cc>ccl){
 			//TODO: add a c_thresh alert
-			addAlertEntity(TYPE_C_THRESH_FAULT, valve_sn, "Cycle Count exceeded the the threshold (ccl) by " + (cc-ccl));
-		}else{
-			//do nothing
+			
+			var num_of_matching_alerts = -1;
+			
+			const query = datastore.createQuery(KIND_VALVE_ALERT)
+			.filter('valve_sn', '=', valve_sn)
+			.filter('alert_type', '=', TYPE_C_THRESH_FAULT);
+
+			datastore.runQuery(query)
+				.then((results) => {
+					// alert entities found.
+					const entities = results[0];
+				
+					console.log("results.length:"+results.length);
+					console.log("results[1]:"+results[1]);
+					console.log('Entities:');
+					entities.forEach((entity) => console.log(entity));
+					num_of_matching_alerts = entities.length;
+					console.log("num_of_matching_alerts:"+entities.length);
+					if(entities.length==0){
+						console.log("Createing a record...");
+						addAlertEntity(TYPE_C_THRESH_FAULT, valve_sn, "Cycle Count exceeded the the threshold (ccl) by " + (cc-ccl));
+						//addAlertEntity(TYPE_C_THRESH_FAULT, valve_sn, "Cycle Count exceeded the the threshold (ccl) by " + (cc-ccl));
+					}else{
+						//update if it is an existing alert
+						updateEntity (valve_sn, TYPE_C_THRESH_FAULT, "Update:Cycle Count exceeded the the threshold (ccl) by " + (cc-ccl));
+					}	
+			});
 		}
 	}
   }
 //[END createEntity]
 
 //[START createAlertEntity]
-function addAlertEntity(alert_type, valve_sn, description){
-		var alertKey = new Date().getTime();
-		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_ALERT).concat("\", \"key\":\"").concat(alertKey).concat("\"}"));
-		const key = getKeyFromRequestData(request_for_key);
-		
-		entity = {
-		key: key,
-		data: [
+function addAlertEntity(alert_type, valve_sn, description){	
+		const key = datastore.key(KIND_VALVE_ALERT);
+		console.log("key_query: "+key.id);
+		const entity = {
+			key: key,
+			data: [
 			{
 				name: 'valve_sn',
 				value: valve_sn
 			},
 			{
 				name: 'detection_time',
-				value: new Date().toJSON() //do a query for old time stamp
+				value: new Date().getTime() //do a query for old time stamp
 			},
 			{
 				name: 'alert_type',
@@ -184,13 +206,61 @@ function addAlertEntity(alert_type, valve_sn, description){
 				name: 'description',
 				value: description 
 			}
-		]
+			]
 		};
 
 		//function to add entities
-		addEntity(entity);
+		addEntity(entity);	
 }
 //[END createAlertEntity]
+
+// [START update_entity]
+function updateEntity (valve_sn, alert_type, description) {
+  const transaction = datastore.transaction();
+  const retrieved_key = datastore.key([
+    KIND_VALVE_ALERT,
+    valve_sn,
+	alert_type
+  ]);
+	console.log("retrieved_key: "+retrieved_key.name);
+  transaction.run()
+    .then(() => transaction.get(retrieved_key))
+    .then((results) => {
+      const retrieved_entity = results[0];
+      retrieved_entity.description = description;
+	  console.log("retrieved_entity.description:"+retrieved_entity.description);
+	  console.log("description:"+description);
+      transaction.save({
+        key: retrieved_key,
+        data: retrieved_entity
+      });
+      return transaction.commit();
+    })
+    .then(() => {
+      // The transaction completed successfully.
+      console.log(`Task ${valve_sn}.${alert_type} updated successfully.`);
+    })
+    .catch(() => transaction.rollback());
+}
+// [END update_entity]
+
+// [START delete_entity]
+function deleteAlert (valve_sn, alert_type) {
+  const taskKey = datastore.key([
+    KIND_VALVE_ALERT,
+    valve_sn,
+	alert_type
+  ]);
+
+  datastore.delete(taskKey)
+    .then(() => {
+      console.log(`Task ${taskId} deleted successfully.`);
+    })
+    .catch((err) => {
+      console.error('ERROR:', err);
+    });
+}
+// [END delete_entity]
 
 // [START addEntity]
 function addEntity (entity) {
