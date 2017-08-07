@@ -185,8 +185,14 @@ function createEntity (jsonData) {
 
 //[START createAlertEntity]
 function addAlertEntity(alert_type, valve_sn, description){	
-		const key = datastore.key(KIND_VALVE_ALERT);
-		console.log("key_query: "+key.id);
+
+		var entityKey = valve_sn + "." + alert_type;
+		var request_for_key = JSON.parse("{\"kind\":\"".concat(KIND_VALVE_ALERT).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
+		const key = getKeyFromRequestData(request_for_key);
+
+
+		//const key = datastore.key(KIND_VALVE_ALERT);
+		console.log("key_query: "+key.name);
 		const entity = {
 			key: key,
 			data: [
@@ -219,10 +225,9 @@ function updateEntity (valve_sn, alert_type, description) {
   const transaction = datastore.transaction();
   const retrieved_key = datastore.key([
     KIND_VALVE_ALERT,
-    valve_sn,
-	alert_type
+    valve_sn + '.' + alert_type
   ]);
-	console.log("retrieved_key: "+retrieved_key.name);
+	console.log("retrieved_keyID: "+retrieved_key.name);
   transaction.run()
     .then(() => transaction.get(retrieved_key))
     .then((results) => {
