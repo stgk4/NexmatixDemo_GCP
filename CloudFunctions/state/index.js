@@ -1,7 +1,7 @@
 /*
 *
 *
-*Cloud function for subscribing to manifold-state topic
+*Cloud function for subscribing to manifold-state topic for status
 *
 *
 */
@@ -96,58 +96,6 @@ console.log("Entered createEntity...");
                         return transaction.save(entity);
                     }
                 })
-
-                // fetch valveAlert for pressure fault
-              /*  .then (()=>transaction.get(retrieved_key_alert_p_fault))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    //case1: if valve_sn.alert_type exists && p_fault =='N'
-                    if(retrieved_entity && isPressureFault_notReported){
-                        return transaction.delete(retrieved_key_alert_p_fault);
-                    }
-                    //case2: if valve_sn.alert_type does not exist && p_fault = 'H' or 'L'
-                    else if(!retrieved_entity && !isPressureFault_notReported){
-
-                        message_time = new Date().getTime();
-                        var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case3: if valve_sn.alert_type exists && p_fault = 'H' or 'L'
-                    else if(retrieved_entity && !isPressureFault_notReported){
-
-                        //update function
-                        message_time = retrieved_entity.update_time;
-                        var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case4: if valve_sn.alert_type does not exist && p_fault == 'N'
-                    else{
-                        //Do Nothing
-                    }
-                })*/
-
-                 // fetch valveAlert for cc_Threshold
-                .then (()=>transaction.get(retrieved_key_alert_c_thresh))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    //case1: if cc>ccl && valve_sn.alert_type does not exists
-                    if(isCCLExceeded && !retrieved_entity){
-                       message_time = new Date().getTime();
-                       var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
-                       return transaction.save(entity);
-                    }
-                    //case2: if cc>ccl && valve_sn.alert_type exists
-                    else if(isCCLExceeded && retrieved_entity){
-                        message_time = retrieved_entity.update_time;
-                        var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case3: if cc<=ccl
-                    else{
-                         //Do Nothing
-                    }
-                })
-
                 .then(()=> {
                    transaction.commit();
                    console.log("Transaction Committed");
@@ -200,62 +148,9 @@ function createValveStatusEntity(jsonData, manifold_sn, key){
     return entity;
 }
 
-function createValveAlertEntity(jsonData, alert_type, key, message_time){
-    console.log("Creating ValveAlertEntity...")
-    if(alert_type==TYPE_PRESSURE_FAULT){
-        description = ((jsonData.p_fault == 'H') ? "High":"Low") + " pressure fault detected";
-    }else if(alert_type==TYPE_LEAK){
-        description = ((jsonData.leak == 'P') ? "Persistent":"\"C\"") + " leak detected";
-    }else if(alert_type==TYPE_C_THRESH_FAULT){
-        description = "Cycle Count exceeded the the threshold (ccl) by " + (jsonData.cc-jsonData.ccl);
-    }else{
-        console.log("Error:Wrong alert type inputted");
-    }
-    const entity = {
-        key: key,
-        data: [
-            {
-                name: 'valve_sn',
-                value: jsonData.valve_sn
-            },
-            {
-                name: 'detection_time',
-                value: message_time //do a query for old time stamp
-            },
-            {
-                name: 'alert_type',
-                value: alert_type
-            },
-            {
-                name: 'description',
-                value: description
-            }
-        ]
-    };
-    return entity;
-}
+/*
 
+gcloud beta functions deploy manifold-state-subscriber --entry-point subscribe --stage
+  -bucket nexmatix-staging-bucket --trigger-topic manifold-state
 
-
-// [START update_entity]
-function updateEntity (transaction, valve_sn, alert_type, description) {
-    const retrieved_key = transaction.key([
-        KIND_VALVE_ALERT,
-        valve_sn + '.' + alert_type
-    ]);
-    console.log("retrieved_keyID: "+retrieved_key.name);
-    transaction.run()
-        .then(() => transaction.get(retrieved_key))
-        .then((results) => {
-            const retrieved_entity = results[0];
-            retrieved_entity.description = description;
-            console.log("retrieved_entity.description:"+retrieved_entity.description);
-            console.log("description:"+description);
-            transaction.save({
-            key: retrieved_key,
-            data: retrieved_entity
-            });
-        }
-    );
-}
-// [END update_entity]
+ */
