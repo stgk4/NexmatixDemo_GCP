@@ -64,42 +64,33 @@ console.log("Entered createEntity");
             const station_num = station.station_num;
             const valve_sn = station.valve_sn;
 
-            var cclExceeded = (station.cc > station.ccl)? true:false;
-            var isPressureFault_notReported = (station.p_fault == 'N')?true:false;
-            var isLeak_notReported = (station.leak=='N')?true:false;
-
             var valveStatusKey = manifold_key + "." + station_num + "." + valve_sn;
             var valveAlertKey_pFault = valve_sn + "." + TYPE_PRESSURE_FAULT;
             var valveAlertKey_leak = valve_sn + "." + TYPE_LEAK;
             var valveAlertKey_CCL = valve_sn + "." + TYPE_C_THRESH_FAULT;
-
-            var retrieved_key_status = datastore.key([KIND_VALVE_STATUS, valveStatusKey]);
-            var retrieved_key_alert_p_fault = datastore.key([KIND_VALVE_ALERT, valveAlertKey_pFault]);
-            var retrieved_key_alert_leak = datastore.key([KIND_VALVE_ALERT, valveAlertKey_leak]);
-            var retrieved_key_alert_c_thresh = datastore.key([KIND_VALVE_ALERT, valveAlertKey_CCL]);
+            var cclExceeded = (jsonData.cc > jsonData.ccl)? true:false;
+            var isPressureFault_notReported = (jsonData.p_fault == 'N')?true:false;
+            var isLeak_notReported = (jsonData.leak=='N')?true:false;
 
             return transaction.run()
                 // fetch valve status entity
-                .then (()=>transaction.get(retrieved_key_status))
+                .then (()=>datastore.key([KIND_VALVE_STATUS, valveStatusKey]))
                 .then((results)=> {
-                    const retrieved_entity = results[0];
+                    const retrieved_key = results[0];
                     // If valve status entity exists
-                    if(retrieved_entity){
+                    if(retrieved_key){
                         //update
-                        console.log("Updated a valve Status Entity with key:"+retrieved_entity);
-                        var entity = createValveStatusEntity(station, manifold_key, retrieved_key_status);
-                        return transaction.save(entity);
+                        console.log("Updated a valve Status Entity with key:"+retrieved_key.name);
                     }else{
                         // Insert valve status
-                        console.log("VStatusKey_retrieved:"+valveStatusKey);
+                        console.log("VStatusKey_retrieved:"+retrieved_key.name);
                         //console.log("Created a valve Status Entity with key:"+retrieved_key.name);
-                        var entity = createValveStatusEntity(station, manifold_key, retrieved_key_status);
-                        return transaction.save(entity);
+                        return transaction.save(createValveStatusEntity(retrieved_key, station));
                     }
                 })
 
                 // fetch valveAlert for pressure fault
-               /* .then (()=>datastore.key([KIND_VALVE_ALERT,valveAlert_pFault]))
+                .then (()=>datastore.key([KIND_VALVE_ALERT,valveAlert_pFault]))
                 .then((results)=> {
                     const retrieved_key = results[0];
                     //case1: if valve_sn.alert_type exists && p_fault =='N'
@@ -119,7 +110,7 @@ console.log("Entered createEntity");
                     else{
                         //Do Nothing
                     }
-                })*/
+                })
 
                 .then(()=> {
                    transaction.commit();
@@ -132,72 +123,16 @@ console.log("Entered createEntity");
       }
 }
 
-
-
-function createValveStatusEntity(jsonData, manifold_sn, key){
-    message_time = new Date().getTime();
-    entity = {
-        key: key,
-        data: [
-           {
-                name:"valve_sn", value:jsonData.valve_sn
-           },
-           {
-                name:"manifold_sn", value:manifold_sn
-           },
-           {
-                name:"station_num", value:jsonData.station_num
-           },
-           {
-                name:"cc", value:jsonData.cc
-           },
-           {
-                name:"ccl", value:jsonData.ccl
-           },
-           {
-                name:"update_time", value:message_time
-           },
-           {
-                name:"input", value:jsonData.input
-           },
-           {
-                name:"pp", value:jsonData.pp
-           },
-           {
-                name:"p_fault", value:jsonData.p_fault
-           },
-           {
-                name:"leak", value:jsonData.leak
-           }
-        ]
-    };
-    console.log("Creating ValveStatusEntity..." + JSON.stringify(entity));
-    return entity;
-}
-
-/*name: valve_sn : jsonData.valve_sn,
-                  manifold_sn: jsonData.manifold_sn,
-                  station_num:jsonData.station_num,
-                  update_time: new Date().getTime(),
-                  input: jsonData.input,
-                  cc: jsonData.cc,
-                  pp:jsonData.pp,
-                  ccl:jsonData.ccl,
-                  p_fault: jsonData.p_fault,
-                  leak: jsonData.leak*/
-
-
-
-
-
-
-function createValveAlertEntity(jsonData, key, alert_type){
+function createValveAlertEntity(jsonData, alert_type){
     console.log("Creating ValveAlertEntity...")
     if(alert_type==TYPE_PRESSURE_FAULT){
+        key = valveAlertKey_pFault;
         description = ((jsonData.p_fault == 'H') ? "High":"Low") + " pressure fault detected";
     }else if(alert_type==TYPE_LEAK){
+        key = valveAlertKey_leak;
         description = ((jsonData.leak == 'P') ? "Persistent":"\"C\"") + " leak detected";
     }else if(alert_type==TYPE_C_THRESH_FAULT){
+        key = valveAlertKey_leak;
         description = "Cycle Count exceeded the the threshold (ccl) by " + (jsonData.cc-jsonData.ccl);
     }else{
         console.log("Error:Wrong alert type inputted");
@@ -226,7 +161,54 @@ function createValveAlertEntity(jsonData, key, alert_type){
     return entity;
 }
 
-
+function createValveStatusEntity(jsonData, key){
+    entity = {
+        key: key,
+        data: [
+            {
+                name: 'valve_sn',
+                value: jsonData.valve_sn
+            },
+            {
+                name: 'manifold_sn',
+                value: jsonData.manifold_key
+            },
+            {
+                name: 'station_num',
+                value: jsonData.station_num
+            },
+            {
+                name: 'update_time',
+                value: new Date().getTime()
+            },
+            {
+                name: 'input',
+                value: jsonData.input
+            },
+            {
+                name: 'cc',
+                value: jsonData.cc
+            },
+            {
+                name: 'pp',
+                value: jsonData.pp
+            },
+            {
+                name: 'ccl',
+                value: jsonData.ccl
+            },
+            {
+                name: 'p_fault',
+                value: jsonData.p_fault
+            },
+            {
+                name: 'leak',
+                value: jsonData.leak
+            }
+        ]
+    };
+    return entity;
+}
 
 // [START update_entity]
 function updateEntity (transaction, valve_sn, alert_type, description) {
