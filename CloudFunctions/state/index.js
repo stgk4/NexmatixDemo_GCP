@@ -49,8 +49,11 @@ function createEntity(jsonData){
 console.log("State: Entered createEntity...");
     var manifold_sn = jsonData.manifold_sn;
     for(var i = 0; i < jsonData.stations.length; i++){
+            console.log("State: jsonData.stations.length:"+jsonData.stations.length);
+            console.log("State: Iteration-"+i);
+            //new transaction started for i'th station
             const transaction = datastore.transaction();
-            console.log("State: Iteration- "+i);
+
             var station = jsonData.stations[i];
 
             const station_num = station.station_num;
