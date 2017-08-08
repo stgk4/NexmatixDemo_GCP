@@ -55,8 +55,8 @@ exports.subscribe = function subscribe (event, callback) {
 function createEntity(jsonData){
 console.log("Entered createEntity...");
     var manifold_sn = jsonData.manifold_sn;
-    const transaction = datastore.transaction();
-      for(var i = 0; i < jsonData.stations.length; i++){
+    for(var i = 0; i < jsonData.stations.length; i++){
+            const transaction = datastore.transaction();
             console.log("Iteration: "+i);
             var station = jsonData.stations[i];
 
@@ -124,7 +124,7 @@ console.log("Entered createEntity...");
                     else{
                         //Do Nothing
                     }
-                })
+                })*/
 
                  // fetch valveAlert for cc_Threshold
                 .then (()=>transaction.get(retrieved_key_alert_c_thresh))
@@ -146,7 +146,7 @@ console.log("Entered createEntity...");
                     else{
                          //Do Nothing
                     }
-                })*/
+                })
 
                 .then(()=> {
                    transaction.commit();
