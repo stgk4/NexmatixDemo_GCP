@@ -46,50 +46,57 @@ exports.subscribe = function subscribe (event, callback) {
 // [END functions_pubsub_subscribe]
 
 function createEntity(jsonData){
-console.log("State: Entered createEntity...");
+    console.log("State: Entered createEntity...");
     var manifold_sn = jsonData.manifold_sn;
-    for(var i = 0; i < jsonData.stations.length; i++){
-            console.log("State: jsonData.stations.length:"+jsonData.stations.length);
-            console.log("State: Iteration-"+i);
-            //new transaction started for i'th station
-            const transaction = datastore.transaction();
 
-            var station = jsonData.stations[i];
+    console.log("station_count:"+jsonData.stations.length);
 
-            const station_num = station.station_num;
-            const valve_sn = station.valve_sn;
+    var station_index;
+    for(station_index in jsonData.stations){
+        //new transaction started for i'th station
+        const transaction = datastore.transaction();
 
-            var valveStatusKey = manifold_sn + "." + station_num + "." + valve_sn;
-            var retrieved_key_status = datastore.key([KIND_VALVE_STATUS, valveStatusKey]);
+        station = jsonData.stations[station_index];
+        const station_num = station.station_num;
+        const valve_sn = station.valve_sn;
+        var valveStatusKey = manifold_sn + "." + station_num + "." + valve_sn;
+        var retrieved_key_status = datastore.key([KIND_VALVE_STATUS, valveStatusKey]);
 
-            return transaction.run()
-                // fetch valve status entity
-                .then (()=>transaction.get(retrieved_key_status))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    // If valve status entity exists
-                    if(retrieved_entity){
-                        //update
-                        console.log("State: Updated a valve Status Entity with key:"+retrieved_key_status.name);
-                        var entity = createValveStatusEntity(station, manifold_sn, retrieved_key_status);
-                        return transaction.save(entity);
-                    }else{
-                        // Insert valve status
-                        console.log("State: VStatusKey_retrieved:"+retrieved_key_status.name);
-                        //console.log("Created a valve Status Entity with key:"+retrieved_key.name);
-                        var entity = createValveStatusEntity(station, manifold_sn, retrieved_key_status);
-                        return transaction.save(entity);
-                    }
-                })
-                .then(()=> {
-                   transaction.commit();
-                   console.log("State: Transaction Committed");
-                })
-                .catch((exception)=> {
-                    transaction.rollback();
-                    console.log("State: Transaction Rolledback:"+exception);
-                });
-            }
+        console.log("state: station_index:"+station_index);
+        console.log("State: station-"+JSON.stringify(station));
+        console.log("State: station_num-"+station_num);
+        console.log("State: valve_sn-"+valve_sn);
+        console.log("State: valveStatusKey-"+valveStatusKey);
+        console.log("State: retrieved_key_status-"+retrieved_key_status);
+
+        return transaction.run()
+            // fetch valve status entity
+            .then (()=>transaction.get(retrieved_key_status))
+            .then((results)=> {
+                const retrieved_entity = results[0];
+                // If valve status entity exists
+                if(retrieved_entity){
+                    //update
+                    console.log("State: Updated a valve Status Entity with key:"+retrieved_key_status.name);
+                    var entity = createValveStatusEntity(station, manifold_sn, retrieved_key_status);
+                    return transaction.save(entity);
+                }else{
+                    // Insert valve status
+                    console.log("State: VStatusKey_retrieved:"+retrieved_key_status.name);
+                    //console.log("Created a valve Status Entity with key:"+retrieved_key.name);
+                    var entity = createValveStatusEntity(station, manifold_sn, retrieved_key_status);
+                    return transaction.save(entity);
+                }
+            })
+            .then(()=> {
+               transaction.commit();
+               console.log("State: Transaction Committed");
+            })
+            .catch((exception)=> {
+                transaction.rollback();
+                console.log("State: Transaction Rolledback:"+exception);
+            });
+        }
     }
 
 function createValveStatusEntity(jsonData, manifold_sn, key){
@@ -135,7 +142,6 @@ function createValveStatusEntity(jsonData, manifold_sn, key){
 
 /*
 
-gcloud beta functions deploy manifold-state-subscriber --entry-point subscribe --stage
-  -bucket nexmatix-staging-bucket --trigger-topic manifold-state
+gcloud beta functions deploy manifold-state-subscriber --entry-point subscribe --stage-bucket nexmatix-staging-bucket --trigger-topic manifold-state
 
  */

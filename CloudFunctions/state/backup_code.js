@@ -257,3 +257,34 @@ function updateEntity (transaction, valve_sn, alert_type, description) {
     );
 }
 // [END update_entity]
+
+
+ /*
+    const transaction = datastore.transaction();
+
+    var entities = [];
+    console.log("State: jsonData.stations.length:"+jsonData.stations.length);
+    var station;
+    for(station in jsonData.stations){
+        console.log("State: station-"+JSON.stringify(station));
+        const station_num = jsonData.stations[station].station_num;
+        const valve_sn = jsonData.stations[station].valve_sn;
+        var valveStatusKey = manifold_sn + "." + station_num + "." + valve_sn;
+        var retrieved_key_status = datastore.key([KIND_VALVE_STATUS, valveStatusKey]);
+        var entity = createValveStatusEntity(station, manifold_sn, retrieved_key_status);
+        entities.push(entity);
+    }
+
+    return transaction.run()
+        .then(()=> {
+             return transaction.save(entities);
+        })
+        .then(()=> {
+           transaction.commit();
+           console.log("State: Transaction Committed");
+        })
+        .catch((exception)=> {
+            transaction.rollback();
+            console.log("State: Transaction Rolledback:"+exception);
+        });
+*/

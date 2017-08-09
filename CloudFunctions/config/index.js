@@ -50,13 +50,16 @@ function createEntity (jsonData) {
   var manifold_key = jsonData.manifold_sn;
   
   for(var i = 0; i < jsonData.stations.length; i++){
+
+      console.log("Config: iteration-"+i);
+
 	  var station = jsonData.stations[i];
 	  
 	  var kind = "Valve";
 	  var entityKey = station.valve_sn;
 	  var request_for_key = JSON.parse("{\"kind\":\"".concat(kind).concat("\", \"key\":\"").concat(entityKey).concat("\"}"));
 	  const key = getKeyFromRequestData(request_for_key);
-	  
+
 	  var entity = {
 		key: key,
 		data: [
@@ -155,3 +158,8 @@ exports.set = function set (req, res) {
       return Promise.reject(err);
     });
 };
+
+/*
+gcloud beta functions deploy manifold-configuration-subscriber --entry-point subscribe --stage-bucket nexmatix-staging-bucket --trigger-topic manifold-configuration
+
+*/

@@ -53,117 +53,125 @@ exports.subscribe = function subscribe (event, callback) {
 
 function createEntity(jsonData){
 console.log("Alert: Entered createEntity...");
-    for(var i = 0; i < jsonData.stations.length; i++){
-            const transaction = datastore.transaction();
-            console.log("Alert: Iteration: "+i);
-            var station = jsonData.stations[i];
 
-            const valve_sn = station.valve_sn;
+    var station_index;
+    for(station_index in jsonData.stations){
+        //new transaction started for i'th station
+        const transaction = datastore.transaction();
+        station = jsonData.stations[station_index];
+        const valve_sn = station.valve_sn;
 
-            var isCCLExceeded = (station.cc > station.ccl)? true:false;
-            var isPressureFault_notReported = (station.p_fault == 'N')?true:false;
-            var isLeak_notReported = (station.leak=='N')?true:false;
+        var isCCLExceeded = (station.cc > station.ccl)? true:false;
+        var isPressureFault_notReported = (station.p_fault == 'N')?true:false;
+        var isLeak_notReported = (station.leak=='N')?true:false;
 
-            var valveAlertKey_pFault = valve_sn + "." + TYPE_PRESSURE_FAULT;
-            var valveAlertKey_leak = valve_sn + "." + TYPE_LEAK;
-            var valveAlertKey_CCL = valve_sn + "." + TYPE_C_THRESH_FAULT;
+        var valveAlertKey_pFault = valve_sn + "." + TYPE_PRESSURE_FAULT;
+        var valveAlertKey_leak = valve_sn + "." + TYPE_LEAK;
+        var valveAlertKey_CCL = valve_sn + "." + TYPE_C_THRESH_FAULT;
 
-            var retrieved_key_alert_p_fault = datastore.key([KIND_VALVE_ALERT, valveAlertKey_pFault]);
-            var retrieved_key_alert_leak = datastore.key([KIND_VALVE_ALERT, valveAlertKey_leak]);
-            var retrieved_key_alert_c_thresh = datastore.key([KIND_VALVE_ALERT, valveAlertKey_CCL]);
+        var retrieved_key_alert_p_fault = datastore.key([KIND_VALVE_ALERT, valveAlertKey_pFault]);
+        var retrieved_key_alert_leak = datastore.key([KIND_VALVE_ALERT, valveAlertKey_leak]);
+        var retrieved_key_alert_c_thresh = datastore.key([KIND_VALVE_ALERT, valveAlertKey_CCL]);
 
-            return transaction.run()
-                // fetch valveAlert for pressure fault
-                .then (()=>transaction.get(retrieved_key_alert_p_fault))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    //case1: if valve_sn.alert_type exists && p_fault =='N'
-                    if(retrieved_entity && isPressureFault_notReported){
-                        return transaction.delete(retrieved_key_alert_p_fault);
-                    }
-                    //case2: if valve_sn.alert_type does not exist && p_fault = 'H' or 'L'
-                    else if(!retrieved_entity && !isPressureFault_notReported){
+        console.log("Alert: station_index:"+station_index);
+        console.log("Alert: station-"+JSON.stringify(station));
+        console.log("Alert: valve_sn-"+valve_sn);
+        console.log("Alert: valveAlertKey_pFault-"+valveAlertKey_pFault);
+        console.log("Alert: valveAlertKey_leak-"+valveAlertKey_leak);
+        console.log("Alert: valveAlertKey_CCL-"+valveAlertKey_CCL);
 
-                        message_time = new Date().getTime();
-                        var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case3: if valve_sn.alert_type exists && p_fault = 'H' or 'L'
-                    else if(retrieved_entity && !isPressureFault_notReported){
-
-                        //update function
-                        message_time = retrieved_entity.update_time;
-                        var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case4: if valve_sn.alert_type does not exist && p_fault == 'N'
-                    else{
-                        //Do Nothing
-                    }
-                })
-
-                // fetch valveAlert for leak
-                .then (()=>transaction.get(retrieved_key_alert_leak))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    //case1: if valve_sn.alert_type exists && leak =='N'
-                    if(retrieved_entity && isLeak_notReported){
-                        return transaction.delete(retrieved_key_alert_leak);
-                    }
-                    //case2: if valve_sn.alert_type does not exist && leak = 'C' or 'Persistent'
-                    else if(!retrieved_entity && !isLeak_notReported){
-
-                        message_time = new Date().getTime();
-                        var entity = createValveAlertEntity(station, TYPE_LEAK, retrieved_key_alert_leak, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case3: if valve_sn.alert_type exists && leak = 'C' or 'Persistent'
-                    else if(retrieved_entity && !isLeak_notReported){
-
-                        //update function
-                        message_time = retrieved_entity.update_time;
-                        var entity = createValveAlertEntity(station, TYPE_LEAK, retrieved_key_alert_leak, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case4: if valve_sn.alert_type does not exist && leak == 'N'
-                    else{
-                        //Do Nothing
-                    }
-                })
-
-                 // fetch valveAlert for cc_Threshold
-                .then (()=>transaction.get(retrieved_key_alert_c_thresh))
-                .then((results)=> {
-                    const retrieved_entity = results[0];
-                    //case1: if cc>ccl && valve_sn.alert_type does not exists
-                    if(isCCLExceeded && !retrieved_entity){
-                       console.log("Alert: inserting c_thresh...");
-                       message_time = new Date().getTime();
-                       var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
-                       return transaction.save(entity);
-                    }
-                    //case2: if cc>ccl && valve_sn.alert_type exists
-                    else if(isCCLExceeded && retrieved_entity){
-                        console.log("Alert: updating c_thresh...");
-                        message_time = retrieved_entity.update_time;
-                        var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
-                        return transaction.save(entity);
-                    }
-                    //Case3: if cc<=ccl
-                    else{
-                         //Do Nothing
-                    }
-                })
-
-                .then(()=> {
-                   transaction.commit();
-                   console.log("Transaction Committed");
-                })
-                .catch((exception)=> {
-                    transaction.rollback();
-                    console.log("Transaction Rolledback:"+exception);
-                });
+        return transaction.run()
+        // fetch valveAlert for pressure fault
+        .then (()=>transaction.get(retrieved_key_alert_p_fault))
+        .then((results)=> {
+            const retrieved_entity = results[0];
+            //case1: if valve_sn.alert_type exists && p_fault =='N'
+            if(retrieved_entity && isPressureFault_notReported){
+                return transaction.delete(retrieved_key_alert_p_fault);
             }
+            //case2: if valve_sn.alert_type does not exist && p_fault = 'H' or 'L'
+            else if(!retrieved_entity && !isPressureFault_notReported){
+
+                message_time = new Date().getTime();
+                var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
+                return transaction.save(entity);
+            }
+            //Case3: if valve_sn.alert_type exists && p_fault = 'H' or 'L'
+            else if(retrieved_entity && !isPressureFault_notReported){
+
+                //update function
+                message_time = retrieved_entity.detection_time;
+                var entity = createValveAlertEntity(station, TYPE_PRESSURE_FAULT, retrieved_key_alert_p_fault, message_time);
+                return transaction.save(entity);
+            }
+            //Case4: if valve_sn.alert_type does not exist && p_fault == 'N'
+            else{
+                //Do Nothing
+            }
+        })
+
+        // fetch valveAlert for leak
+        .then (()=>transaction.get(retrieved_key_alert_leak))
+        .then((results)=> {
+            const retrieved_entity = results[0];
+            //case1: if valve_sn.alert_type exists && leak =='N'
+            if(retrieved_entity && isLeak_notReported){
+                return transaction.delete(retrieved_key_alert_leak);
+            }
+            //case2: if valve_sn.alert_type does not exist && leak = 'C' or 'Persistent'
+            else if(!retrieved_entity && !isLeak_notReported){
+
+                message_time = new Date().getTime();
+                var entity = createValveAlertEntity(station, TYPE_LEAK, retrieved_key_alert_leak, message_time);
+                return transaction.save(entity);
+            }
+            //Case3: if valve_sn.alert_type exists && leak = 'C' or 'Persistent'
+            else if(retrieved_entity && !isLeak_notReported){
+
+                //update function
+                message_time = retrieved_entity.detection_time;
+                var entity = createValveAlertEntity(station, TYPE_LEAK, retrieved_key_alert_leak, message_time);
+                return transaction.save(entity);
+            }
+            //Case4: if valve_sn.alert_type does not exist && leak == 'N'
+            else{
+                //Do Nothing
+            }
+        })
+
+             // fetch valveAlert for cc_Threshold
+            .then (()=>transaction.get(retrieved_key_alert_c_thresh))
+            .then((results)=> {
+                const retrieved_entity = results[0];
+                //case1: if cc>ccl && valve_sn.alert_type does not exists
+                if(isCCLExceeded && !retrieved_entity){
+                   console.log("Alert: inserting c_thresh...");
+                   message_time = new Date().getTime();
+                   var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
+                   return transaction.save(entity);
+                }
+                //case2: if cc>ccl && valve_sn.alert_type exists
+                else if(isCCLExceeded && retrieved_entity){
+                    console.log("Alert: updating c_thresh...");
+                    message_time = retrieved_entity.detection_time;
+                    var entity = createValveAlertEntity(station, TYPE_C_THRESH_FAULT, retrieved_key_alert_c_thresh, message_time);
+                    return transaction.save(entity);
+                }
+                //Case3: if cc<=ccl
+                else{
+                     //Do Nothing
+                }
+            })
+
+            .then(()=> {
+               transaction.commit();
+               console.log("Transaction Committed");
+            })
+            .catch((exception)=> {
+                transaction.rollback();
+                console.log("Transaction Rolledback:"+exception);
+            });
+        }
     }
 
 function createValveAlertEntity(jsonData, alert_type, key, message_time){
@@ -185,7 +193,7 @@ function createValveAlertEntity(jsonData, alert_type, key, message_time){
                 value: jsonData.valve_sn
             },
             {
-                name: 'update_time',
+                name: 'detection_time',
                 value: message_time //do a query for old time stamp
             },
             {
